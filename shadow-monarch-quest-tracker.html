@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Shadow Monarch — Daily Quest Tracker</title>
+<style>
+  :root{
+    --void:#050311;
+    --panel:#0b0820;
+    --panel2:#100c2b;
+    --edge:#2a1f5e;
+    --purple:#8b5cf6;
+    --purple-bright:#a970ff;
+    --blue:#3fa9f5;
+    --glow: 0 0 6px rgba(139,92,246,.9), 0 0 18px rgba(63,169,245,.45);
+    --xp:#48e5ff;
+    --success:#39ff9d;
+    --danger:#ff3b5c;
+    --danger-glow: 0 0 8px rgba(255,59,92,.8), 0 0 20px rgba(255,59,92,.35);
+    --gold:#ffcf5c;
+    --text:#e7e5ff;
+    --text-dim:#8a84b8;
+    --mono: 'Consolas','SF Mono',ui-monospace,'Courier New',monospace;
+    --disp: 'Segoe UI',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(139,92,246,.18), transparent 45%),
+      radial-gradient(ellipse at 90% 10%, rgba(63,169,245,.14), transparent 40%),
+      linear-gradient(180deg,#04030d,#070417 40%,#050311);
+    color:var(--text);
+    font-family:var(--disp);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:rgba(139,92,246,.4);}
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px;}
+
+  .hidden{display:none !important;}
+
+  /* ---------- System Panel base ---------- */
+  .sys-panel{
+    background:linear-gradient(180deg, rgba(16,12,43,.92), rgba(8,6,24,.96));
+    border:1px solid var(--edge);
+    border-radius:6px;
+    box-shadow: var(--glow), inset 0 0 30px rgba(139,92,246,.05);
+    position:relative;
+  }
+  .sys-panel::before{
+    content:"";
+    position:absolute; inset:-1px;
+    border-radius:6px;
+    padding:1px;
+    background:linear-gradient(135deg,var(--purple),transparent 30%,transparent 70%,var(--blue));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    opacity:.7;
+    pointer-events:none;
+  }
+  .sys-title{
+    font-family:var(--mono);
+    letter-spacing:3px;
+    text-transform:uppercase;
+    font-weight:700;
+    font-size:12px;
+    color:var(--purple-bright);
+    display:flex; align-items:center; gap:8px;
+  }
+  .sys-title::before{content:"◆";color:var(--blue);text-shadow:var(--glow);}
+
+  h1,h2,h3{font-family:var(--disp);font-weight:800;letter-spacing:1px;margin:0;}
+
+  button{
+    font-family:var(--mono);
+    cursor:pointer;
+  }
+  .btn{
+    background:linear-gradient(180deg, rgba(139,92,246,.18), rgba(63,169,245,.10));
+    border:1px solid var(--purple);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:4px;
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    font-size:12px;
+    box-shadow: var(--glow);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 0 10px rgba(139,92,246,1),0 0 26px rgba(63,169,245,.6);}
+  .btn:active{transform:translateY(0);}
+  .btn.ghost{background:transparent;border-color:var(--edge);color:var(--text-dim);box-shadow:none;}
+  .btn.danger{border-color:var(--danger);color:#ffdada;box-shadow:var(--danger-glow);}
+  .btn.block{width:100%;}
+  .btn.small{padding:6px 10px;font-size:10px;}
+
+  input[type=text],input[type=date],input[type=time],input[type=password],select,textarea{
+    background:rgba(255,255,255,.03);
+    border:1px solid var(--edge);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:4px;
+    font-family:var(--mono);
+    font-size:13px;
+    width:100%;
+    outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--purple-bright);box-shadow:0 0 8px rgba(139,92,246,.5);}
+  label{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
+
+  /* ---------- Lock Screen ---------- */
+  #lockScreen{
+    position:fixed; inset:0; z-index:500;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 30%, rgba(139,92,246,.12), transparent 60%), #050311;
+  }
+  .lock-box{width:320px; max-width:90vw; padding:34px 28px; text-align:center;}
+  .arise-mark{
+    font-size:40px; font-weight:900; letter-spacing:6px;
+    background:linear-gradient(180deg,var(--purple-bright),var(--blue));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:var(--glow);
+    margin-bottom:4px;
+  }
+  .lock-sub{font-family:var(--mono);color:var(--text-dim);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;}
+  .pin-dots{display:flex; gap:14px; justify-content:center; margin:22px 0;}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:1px solid var(--edge);background:transparent;transition:all .15s;}
+  .pin-dot.filled{background:var(--purple-bright); box-shadow:var(--glow); border-color:var(--purple-bright);}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;}
+  .keypad button{
+    aspect-ratio:1; background:rgba(139,92,246,.06); border:1px solid var(--edge); color:var(--text);
+    border-radius:8px; font-size:20px; font-weight:700;
+  }
+  .keypad button:hover{border-color:var(--purple-bright); box-shadow:var(--glow);}
+  .lock-error{color:var(--danger); font-family:var(--mono); font-size:12px; height:16px; margin-top:6px;}
+
+  /* ---------- App shell ---------- */
+  #app{max-width:520px; margin:0 auto; padding:16px 14px 100px; min-height:100vh;}
+
+  /* HUD */
+  .hud{padding:16px; margin-bottom:14px;}
+  .hud-top{display:flex; justify-content:space-between; align-items:flex-start;}
+  .rank-badge{
+    width:54px;height:54px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;font-weight:900;
+    border:2px solid var(--purple-bright);
+    background:radial-gradient(circle, rgba(139,92,246,.25), rgba(0,0,0,.2));
+    box-shadow:var(--glow);
+  }
+  .player-name{font-size:18px;letter-spacing:1px;}
+  .player-title{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;}
+  .streak-chip{
+    font-family:var(--mono); font-size:11px; color:var(--gold);
+    border:1px solid rgba(255,207,92,.4); padding:4px 8px; border-radius:20px;
+    white-space:nowrap;
+  }
+  .xp-wrap{margin-top:14px;}
+  .xp-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text-dim);margin-bottom:5px;letter-spacing:1px;}
+  .xp-bar{height:12px;border-radius:6px;background:rgba(255,255,255,.05);border:1px solid var(--edge);overflow:hidden;}
+  .xp-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--purple),var(--xp));box-shadow:0 0 10px rgba(72,229,255,.7);transition:width .5s ease;}
+
+  /* Tabs */
+  .tabs{display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; padding-bottom:2px;}
+  .tab{
+    flex:0 0 auto; font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    padding:8px 12px; border-radius:4px; border:1px solid var(--edge); color:var(--text-dim); background:rgba(255,255,255,.02);
+  }
+  .tab.active{color:var(--text); border-color:var(--purple-bright); box-shadow:var(--glow); background:rgba(139,92,246,.12);}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+
+  .section-title{display:flex; align-items:center; justify-content:space-between; margin:18px 0 8px;}
+  .section-title h3{font-size:13px; letter-spacing:2px; text-transform:uppercase; color:var(--purple-bright);}
+  .section-title .count{font-family:var(--mono); font-size:11px; color:var(--text-dim);}
+
+  /* Quest cards */
+  .quest{
+    display:flex; align-items:center; gap:10px;
+    padding:12px; margin-bottom:8px;
+  }
+  .quest.done{opacity:.55;}
+  .quest.done .quest-title{text-decoration:line-through; color:var(--success);}
+  .quest.boss{border-color:var(--gold) !important;}
+  .quest.weekly .type-tag{color:var(--blue);}
+  .check{
+    width:26px;height:26px;border-radius:50%;border:2px solid var(--purple-bright);
+    flex:0 0 auto; display:flex;align-items:center;justify-content:center; font-size:14px;
+    background:rgba(139,92,246,.08);
+  }
+  .quest.done .check{background:var(--success); border-color:var(--success); color:#03130a;}
+  .quest-body{flex:1; min-width:0;}
+  .quest-title{font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .quest-meta{font-family:var(--mono); font-size:10px; color:var(--text-dim); letter-spacing:.5px; display:flex; gap:8px; margin-top:2px; flex-wrap:wrap;}
+  .type-tag{color:var(--purple-bright);}
+  .quest-actions{display:flex; gap:6px;}
+  .icon-btn{background:transparent;border:1px solid var(--edge); color:var(--text-dim); border-radius:4px; width:28px;height:28px; font-size:13px;}
+  .icon-btn:hover{color:var(--text); border-color:var(--purple-bright);}
+
+  .quest.pending{border-color:var(--danger) !important; box-shadow:var(--danger-glow);}
+  .quest.pending .check{border-color:var(--danger);}
+
+  .empty-note{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-align:center; padding:24px 10px; border:1px dashed var(--edge); border-radius:6px;}
+
+  /* Floating add button */
+  .fab{
+    position:fixed; right:20px; bottom:24px; z-index:60;
+    width:58px;height:58px;border-radius:50%;
+    background:linear-gradient(135deg,var(--purple),var(--blue));
+    color:#fff; font-size:28px; font-weight:900; border:none;
+    box-shadow:0 0 14px rgba(139,92,246,.9), 0 0 30px rgba(63,169,245,.5);
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* Modal */
+  .modal-overlay{position:fixed; inset:0; background:rgba(3,2,12,.75); backdrop-filter:blur(3px); z-index:200; display:flex; align-items:flex-end; justify-content:center;}
+  .modal{
+    width:100%; max-width:520px; padding:22px; border-radius:14px 14px 0 0;
+    max-height:88vh; overflow-y:auto;
+  }
+  .modal h2{font-size:16px; letter-spacing:2px; text-transform:uppercase; color:var(--purple-bright); margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; padding:10px 0;}
+  .switch{position:relative; width:44px; height:24px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--edge);border-radius:24px;transition:.2s;}
+  .slider::before{content:"";position:absolute;width:18px;height:18px;left:2px;top:2px;background:var(--text-dim);border-radius:50%;transition:.2s;}
+  .switch input:checked + .slider{background:rgba(139,92,246,.3); border-color:var(--purple-bright);}
+  .switch input:checked + .slider::before{transform:translateX(20px); background:var(--purple-bright); box-shadow:var(--glow);}
+  .modal-actions{display:flex; gap:10px; margin-top:18px;}
+  .radio-tabs{display:flex; gap:6px;}
+  .radio-tabs label{flex:1; text-align:center; border:1px solid var(--edge); border-radius:4px; padding:8px 4px; cursor:pointer; font-size:10px; margin:0;}
+  .radio-tabs input{display:none;}
+  .radio-tabs input:checked + span{color:var(--purple-bright);}
+  .radio-tabs label:has(input:checked){border-color:var(--purple-bright); box-shadow:var(--glow); background:rgba(139,92,246,.1);}
+
+  /* System message popup (level up / quest cleared) */
+  #sysMsgOverlay{
+    position:fixed; inset:0; z-index:400; display:flex; align-items:center; justify-content:center;
+    background:rgba(2,1,8,.55); animation:fadeIn .2s ease;
+  }
+  .sys-msg-box{
+    width:300px; padding:26px 20px; text-align:center;
+    animation:popIn .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  .sys-msg-box .sys-title{justify-content:center; margin-bottom:14px;}
+  .sys-msg-text{font-weight:700; font-size:15px; line-height:1.5;}
+  .xp-gain{font-family:var(--mono); color:var(--success); font-size:13px; margin-top:10px; text-shadow:0 0 8px rgba(57,255,157,.7);}
+  @keyframes popIn{from{transform:scale(.7);opacity:0;} to{transform:scale(1);opacity:1;}}
+  @keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+
+  /* Level up burst */
+  #levelUpOverlay{position:fixed; inset:0; z-index:410; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+  .levelup-text{
+    font-size:34px; font-weight:900; letter-spacing:2px;
+    background:linear-gradient(180deg,#fff,var(--purple-bright));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 30px rgba(139,92,246,.9);
+    animation:levelBlast 1.4s ease forwards;
+  }
+  @keyframes levelBlast{
+    0%{transform:scale(.3) rotate(-3deg); opacity:0;}
+    25%{transform:scale(1.15) rotate(1deg); opacity:1;}
+    40%{transform:scale(1);}
+    80%{opacity:1;}
+    100%{opacity:0; transform:scale(1.05);}
+  }
+
+  /* Toast */
+  #toast{
+    position:fixed; left:50%; bottom:96px; transform:translateX(-50%);
+    padding:10px 18px; font-family:var(--mono); font-size:12px; z-index:300;
+    border-radius:6px; opacity:0; transition:opacity .3s ease;
+  }
+  #toast.show{opacity:1;}
+
+  /* Stats */
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0 4px;}
+  .stat-box{padding:12px 6px; text-align:center;}
+  .stat-num{font-size:20px; font-weight:900; color:var(--purple-bright);}
+  .stat-label{font-family:var(--mono); font-size:9px; color:var(--text-dim); letter-spacing:1px; text-transform:uppercase; margin-top:2px;}
+  .bar-row{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+  .bar-row .bl{width:64px; font-family:var(--mono); font-size:10px; color:var(--text-dim);}
+  .bar-track{flex:1; height:8px; background:rgba(255,255,255,.05); border:1px solid var(--edge); border-radius:4px; overflow:hidden;}
+  .bar-fill{height:100%; background:linear-gradient(90deg,var(--purple),var(--blue));}
+
+  .prayer-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .prayer-item{padding:10px;}
+  .prayer-item label{margin-bottom:4px;}
+
+  .footer-note{text-align:center; font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:26px; letter-spacing:1px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOCK SCREEN ================= -->
+<div id="lockScreen">
+  <div class="sys-panel lock-box">
+    <div class="arise-mark">ARISE</div>
+    <div class="lock-sub" id="lockSubText">Enter Hunter PIN</div>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="lock-error" id="lockError"></div>
+    <div class="keypad" id="keypad"></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+
+  <!-- HUD -->
+  <div class="sys-panel hud">
+    <div class="hud-top">
+      <div style="display:flex; gap:12px; align-items:center;">
+        <div class="rank-badge" id="rankBadge">E</div>
+        <div>
+          <div class="player-name" id="playerName">Player</div>
+          <div class="player-title">Shadow Monarch · Lv <span id="levelNum">1</span></div>
+        </div>
+      </div>
+      <div class="streak-chip">🔥 Streak: <span id="streakNum">0</span></div>
+    </div>
+    <div class="xp-wrap">
+      <div class="xp-labels"><span>XP</span><span id="xpLabel">0 / 100</span></div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-screen="quests">Quests</div>
+    <div class="tab" data-screen="night">Night Plan</div>
+    <div class="tab" data-screen="prayer">Boss Quests</div>
+    <div class="tab" data-screen="pending">Pending</div>
+    <div class="tab" data-screen="stats">Stats</div>
+    <div class="tab" data-screen="settings">Settings</div>
+  </div>
+
+  <!-- QUESTS SCREEN -->
+  <div class="screen active" id="screen-quests">
+    <div class="section-title"><h3>Today's Quests</h3><span class="count" id="todayCount">0</span></div>
+    <div id="todayList"></div>
+
+    <div class="section-title"><h3>Weekly Quests</h3><span class="count" id="weeklyCount">0</span></div>
+    <div id="weeklyList"></div>
+
+    <div class="section-title"><h3>Upcoming</h3><span class="count" id="upcomingCount">0</span></div>
+    <div id="upcomingList"></div>
+  </div>
+
+  <!-- NIGHT PLANNING SCREEN -->
+  <div class="screen" id="screen-night">
+    <div class="section-title"><h3>Plan Tomorrow's Quests</h3></div>
+    <div class="empty-note" style="margin-bottom:12px;">Set your quests before you sleep, Hunter. They'll appear under Today when the sun rises.</div>
+    <div id="tomorrowList"></div>
+    <button class="btn block" style="margin-top:12px;" onclick="openAddModal(true)">+ Add Quest for Tomorrow</button>
+  </div>
+
+  <!-- PRAYER / BOSS QUESTS SCREEN -->
+  <div class="screen" id="screen-prayer">
+    <div class="section-title"><h3>Daily Boss Quests</h3></div>
+    <div id="prayerList"></div>
+    <div class="section-title"><h3>Set Boss Quest Times</h3></div>
+    <div class="sys-panel" style="padding:14px;">
+      <div class="prayer-grid" id="prayerTimesGrid"></div>
+      <button class="btn block" style="margin-top:14px;" onclick="savePrayerTimes()">Save Boss Times</button>
+    </div>
+  </div>
+
+  <!-- PENDING SCREEN -->
+  <div class="screen" id="screen-pending">
+    <div class="section-title"><h3 style="color:var(--danger);">⚠ Pending Quests</h3><span class="count" id="pendingCount">0</span></div>
+    <div class="empty-note" style="margin-bottom:12px;">Quests that rang and weren't cleared within 10 minutes land here.</div>
+    <div id="pendingList"></div>
+  </div>
+
+  <!-- STATS SCREEN -->
+  <div class="screen" id="screen-stats">
+    <div class="sys-panel" style="padding:16px;">
+      <div class="sys-title">Hunter Report</div>
+      <div class="stat-grid">
+        <div class="sys-panel stat-box"><div class="stat-num" id="statToday">0/0</div><div class="stat-label">Today</div></div>
+        <div class="sys-panel stat-box"><div class="stat-num" id="statWeek">0/0</div><div class="stat-label">This Week</div></div>
+        <div class="sys-panel stat-box"><div class="stat-num" id="statMonth">0/0</div><div class="stat-label">This Month</div></div>
+      </div>
+    </div>
+
+    <div class="section-title"><h3>Last 7 Days</h3></div>
+    <div class="sys-panel" style="padding:14px;" id="weekBars"></div>
+
+    <div class="section-title"><h3>Badges</h3></div>
+    <div class="sys-panel" style="padding:14px; display:flex; gap:10px; flex-wrap:wrap;" id="badgeList"></div>
+
+    <button class="btn block" style="margin-top:16px;" onclick="downloadReport('json')">Download Report (.json)</button>
+    <button class="btn block ghost" style="margin-top:8px;" onclick="downloadReport('csv')">Download Report (.csv)</button>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div class="screen" id="screen-settings">
+    <div class="sys-panel" style="padding:16px;">
+      <div class="sys-title">Settings</div>
+      <div class="field" style="margin-top:14px;">
+        <label>Hunter Name</label>
+        <input type="text" id="settingName" placeholder="Player">
+      </div>
+      <div class="toggle-row">
+        <span style="font-family:var(--mono); font-size:12px;">System Sound (ting)</span>
+        <label class="switch"><input type="checkbox" id="soundToggle"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span style="font-family:var(--mono); font-size:12px;">Browser Notifications</span>
+        <button class="btn small" onclick="requestNotifPermission()">Enable</button>
+      </div>
+      <button class="btn block" style="margin-top:16px;" onclick="saveSettings()">Save Settings</button>
+      <button class="btn block ghost" style="margin-top:10px;" onclick="changePinFlow()">Change PIN</button>
+      <button class="btn block danger" style="margin-top:10px;" onclick="resetAllData()">Reset All Data</button>
+    </div>
+    <div class="footer-note">SHADOW MONARCH SYSTEM · v1.0 · Fully Offline</div>
+  </div>
+
+</div>
+
+<button class="fab hidden" id="fabAdd" onclick="openAddModal(false)">+</button>
+
+<!-- ================= ADD QUEST MODAL ================= -->
+<div class="modal-overlay hidden" id="addModalOverlay">
+  <div class="sys-panel modal">
+    <h2 id="addModalTitle">New Quest</h2>
+    <div class="field">
+      <label>Quest Title</label>
+      <input type="text" id="qTitle" placeholder="e.g. Complete 100 push-ups">
+    </div>
+    <div class="field">
+      <label>Quest Type</label>
+      <div class="radio-tabs">
+        <label><input type="radio" name="qType" value="daily" checked><span>Daily</span></label>
+        <label><input type="radio" name="qType" value="weekly"><span>Weekly</span></label>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="qDate">
+      </div>
+      <div class="field">
+        <label>Time</label>
+        <input type="time" id="qTime">
+      </div>
+    </div>
+    <div class="toggle-row">
+      <span style="font-family:var(--mono); font-size:12px;">Set Alarm</span>
+      <label class="switch"><input type="checkbox" id="qAlarm" checked><span class="slider"></span></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost block" onclick="closeAddModal()">Cancel</button>
+      <button class="btn block" onclick="saveNewQuest()">Save Quest</button>
+    </div>
+  </div>
+</div>
+
+<!-- System Message Overlay -->
+<div class="modal-overlay hidden" id="sysMsgOverlay">
+  <div class="sys-panel sys-msg-box">
+    <div class="sys-title">System</div>
+    <div class="sys-msg-text" id="sysMsgText">Quest Cleared!</div>
+    <div class="xp-gain" id="sysMsgXp">+20 XP</div>
+    <button class="btn block" style="margin-top:18px;" onclick="closeSysMsg()">Continue</button>
+  </div>
+</div>
+
+<!-- Level Up Overlay -->
+<div id="levelUpOverlay" class="hidden">
+  <div class="levelup-text" id="levelUpText">LEVEL UP!</div>
+</div>
+
+<div id="toast"></div>
+
+<audio id="tingSound" preload="auto">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+/* =========================================================
+   SHADOW MONARCH — DAILY QUEST TRACKER
+   Fully offline. Everything persists in localStorage.
+========================================================= */
+
+const LS_KEYS = {
+  pin: 'sm_pin',
+  player: 'sm_player',
+  tasks: 'sm_tasks',
+  prayer: 'sm_prayer_times',
+  prayerLog: 'sm_prayer_log',
+  history: 'sm_history',
+  settings: 'sm_settings',
+};
+
+const MOTIVATION_POOL = [
+  "Quest Cleared! You have grown stronger.",
+  "E-Rank Hunter → keep pushing to S-Rank!",
+  "Shadow Army is proud of you.",
+  "Another step closer to becoming the Monarch.",
+  "Your will to survive has been recognized.",
+  "Status updated. Strength +1.",
+  "The System acknowledges your growth.",
+  "Well done, Hunter. The Gate awaits your next challenge.",
+  "You have proven your resolve.",
+  "Arise. There is still more power within you."
+];
+
+const RANKS = [
+  {name:'E', min:0},
+  {name:'D', min:10},
+  {name:'C', min:25},
+  {name:'B', min:50},
+  {name:'A', min:100},
+  {name:'S', min:200},
+];
+
+const PRAYER_NAMES = ['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+
+let state = {
+  player: null,
+  tasks: [],
+  prayerTimes: {},
+  prayerLog: {},
+  history: {},
+  settings: {sound:true, name:'Player'}
+};
+
+let pendingPinBuffer = '';
+let pinMode = 'unlock'; // 'setup1' | 'setup2' | 'unlock' | 'changeOld' | 'changeNew1' | 'changeNew2'
+let pinFirstEntry = '';
+let editingQuestId = null;
+let addingForTomorrow = false;
+
+/* ---------------- Storage helpers ---------------- */
+function loadAll(){
+  const p = localStorage.getItem(LS_KEYS.player);
+  state.player = p ? JSON.parse(p) : {level:1, xp:0, xpToNext:100, streak:0, lastCompletedDate:null, totalCompleted:0, dungeonClearDates:[]};
+  const t = localStorage.getItem(LS_KEYS.tasks);
+  state.tasks = t ? JSON.parse(t) : [];
+  const pr = localStorage.getItem(LS_KEYS.prayer);
+  state.prayerTimes = pr ? JSON.parse(pr) : {Fajr:'05:00',Dhuhr:'13:00',Asr:'16:30',Maghrib:'19:00',Isha:'20:30'};
+  const plog = localStorage.getItem(LS_KEYS.prayerLog);
+  state.prayerLog = plog ? JSON.parse(plog) : {};
+  const h = localStorage.getItem(LS_KEYS.history);
+  state.history = h ? JSON.parse(h) : {};
+  const s = localStorage.getItem(LS_KEYS.settings);
+  state.settings = s ? JSON.parse(s) : {sound:true, name:'Player'};
+}
+function saveState(key){
+  const map = {
+    player: [LS_KEYS.player, state.player],
+    tasks: [LS_KEYS.tasks, state.tasks],
+    prayer: [LS_KEYS.prayer, state.prayerTimes],
+    prayerLog: [LS_KEYS.prayerLog, state.prayerLog],
+    history: [LS_KEYS.history, state.history],
+    settings: [LS_KEYS.settings, state.settings],
+  };
+  const [k,v] = map[key];
+  localStorage.setItem(k, JSON.stringify(v));
+}
+
+/* ---------------- Date helpers ---------------- */
+function todayStr(d=new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function tomorrowStr(){
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return todayStr(d);
+}
+function nowHM(){
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function isoWeekKey(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const day = (d.getDay()+6)%7; // mon=0
+  d.setDate(d.getDate()-day);
+  return todayStr(d); // monday of that week as key
+}
+
+/* ---------------- PIN LOCK ---------------- */
+function renderPinDots(len){
+  const wrap = document.getElementById('pinDots');
+  wrap.innerHTML = '';
+  for(let i=0;i<4;i++){
+    const dot = document.createElement('div');
+    dot.className = 'pin-dot' + (i < len ? ' filled' : '');
+    wrap.appendChild(dot);
+  }
+}
+function buildKeypad(){
+  const kp = document.getElementById('keypad');
+  kp.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  keys.forEach(k=>{
+    const b = document.createElement('button');
+    b.textContent = k;
+    if(k===''){ b.style.visibility='hidden'; }
+    else{
+      b.onclick = ()=> handleKeyPress(k);
+    }
+    kp.appendChild(b);
+  });
+}
+function handleKeyPress(k){
+  const errEl = document.getElementById('lockError');
+  errEl.textContent = '';
+  if(k === '⌫'){
+    pendingPinBuffer = pendingPinBuffer.slice(0,-1);
+    renderPinDots(pendingPinBuffer.length);
+    return;
+  }
+  if(pendingPinBuffer.length >= 4) return;
+  pendingPinBuffer += k;
+  renderPinDots(pendingPinBuffer.length);
+  if(pendingPinBuffer.length === 4){
+    setTimeout(()=>processPinEntry(), 150);
+  }
+}
+function processPinEntry(){
+  const errEl = document.getElementById('lockError');
+  const sub = document.getElementById('lockSubText');
+  const storedPin = localStorage.getItem(LS_KEYS.pin);
+
+  if(pinMode === 'setup1'){
+    pinFirstEntry = pendingPinBuffer;
+    pendingPinBuffer = '';
+    renderPinDots(0);
+    sub.textContent = 'Confirm Hunter PIN';
+    pinMode = 'setup2';
+    return;
+  }
+  if(pinMode === 'setup2'){
+    if(pendingPinBuffer === pinFirstEntry){
+      localStorage.setItem(LS_KEYS.pin, pendingPinBuffer);
+      unlockApp();
+    } else {
+      errEl.textContent = 'PIN mismatch. Try again.';
+      pendingPinBuffer=''; pinFirstEntry='';
+      renderPinDots(0);
+      sub.textContent = 'Set Hunter PIN';
+      pinMode = 'setup1';
+    }
+    return;
+  }
+  if(pinMode === 'unlock'){
+    if(pendingPinBuffer === storedPin){
+      unlockApp();
+    } else {
+      errEl.textContent = 'Incorrect PIN.';
+      pendingPinBuffer='';
+      renderPinDots(0);
+    }
+    return;
+  }
+  if(pinMode === 'changeOld'){
+    if(pendingPinBuffer === storedPin){
+      pendingPinBuffer='';
+      renderPinDots(0);
+      sub.textContent = 'Enter New PIN';
+      pinMode = 'changeNew1';
+    } else {
+      errEl.textContent = 'Incorrect current PIN.';
+      pendingPinBuffer=''; renderPinDots(0);
+    }
+    return;
+  }
+  if(pinMode === 'changeNew1'){
+    pinFirstEntry = pendingPinBuffer;
+    pendingPinBuffer=''; renderPinDots(0);
+    sub.textContent = 'Confirm New PIN';
+    pinMode = 'changeNew2';
+    return;
+  }
+  if(pinMode === 'changeNew2'){
+    if(pendingPinBuffer === pinFirstEntry){
+      localStorage.setItem(LS_KEYS.pin, pendingPinBuffer);
+      unlockApp();
+      showToast('PIN updated.');
+    } else {
+      errEl.textContent = 'Mismatch. Try again.';
+      pendingPinBuffer=''; pinFirstEntry='';
+      renderPinDots(0);
+      sub.textContent = 'Enter New PIN';
+      pinMode = 'changeNew1';
+    }
+    return;
+  }
+}
+function unlockApp(){
+  document.getElementById('lockScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('fabAdd').classList.remove('hidden');
+  renderEverything();
+}
+function changePinFlow(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('fabAdd').classList.add('hidden');
+  document.getElementById('lockScreen').classList.remove('hidden');
+  pendingPinBuffer=''; renderPinDots(0);
+  document.getElementById('lockSubText').textContent = 'Enter Current PIN';
+  pinMode = 'changeOld';
+}
+function initLock(){
+  buildKeypad();
+  renderPinDots(0);
+  const storedPin = localStorage.getItem(LS_KEYS.pin);
+  if(!storedPin){
+    pinMode = 'setup1';
+    document.getElementById('lockSubText').textContent = 'Set Hunter PIN';
+  } else {
+    pinMode = 'unlock';
+    document.getElementById('lockSubText').textContent = 'Enter Hunter PIN';
+  }
+}
+
+/* ---------------- Rank / Level logic ---------------- */
+function computeRank(totalCompleted){
+  let cur = RANKS[0].name;
+  for(const r of RANKS){ if(totalCompleted >= r.min) cur = r.name; }
+  return cur;
+}
+function xpForType(type){
+  if(type === 'boss') return 60;
+  if(type === 'weekly') return 50;
+  return 20;
+}
+function grantXP(amount){
+  const p = state.player;
+  p.xp += amount;
+  let leveled = false;
+  while(p.xp >= p.xpToNext){
+    p.xp -= p.xpToNext;
+    p.level += 1;
+    p.xpToNext = Math.round(p.xpToNext * 1.18);
+    leveled = true;
+  }
+  saveState('player');
+  return leveled;
+}
+
+/* ---------------- Streak / history ---------------- */
+function getDayRecord(dateStr){
+  if(!state.history[dateStr]) state.history[dateStr] = {completed:0, total:0};
+  return state.history[dateStr];
+}
+function recomputeTodayTotals(){
+  const d = todayStr();
+  const rec = getDayRecord(d);
+  const todays = state.tasks.filter(t=> t.date === d && t.type!=='weekly');
+  rec.total = todays.length;
+  rec.completed = todays.filter(t=>t.done).length;
+  saveState('history');
+}
+function checkDungeonClear(){
+  const d = todayStr();
+  const rec = getDayRecord(d);
+  if(rec.total > 0 && rec.completed === rec.total){
+    if(!state.player.dungeonClearDates.includes(d)){
+      state.player.dungeonClearDates.push(d);
+      saveState('player');
+      return true;
+    }
+  }
+  return false;
+}
+function updateStreak(){
+  const d = todayStr();
+  const p = state.player;
+  if(p.lastCompletedDate === d) return; // already counted today
+  const yesterday = todayStr(new Date(Date.now()-86400000));
+  if(p.lastCompletedDate === yesterday){
+    p.streak += 1;
+  } else {
+    p.streak = 1;
+  }
+  p.lastCompletedDate = d;
+  saveState('player');
+}
+
+/* ---------------- Rendering ---------------- */
+function renderEverything(){
+  renderHUD();
+  renderQuestScreens();
+  renderPrayerScreen();
+  renderPendingScreen();
+  renderStats();
+  document.getElementById('settingName').value = state.settings.name || 'Player';
+  document.getElementById('soundToggle').checked = !!state.settings.sound;
+}
+function renderHUD(){
+  const p = state.player;
+  document.getElementById('levelNum').textContent = p.level;
+  document.getElementById('streakNum').textContent = p.streak;
+  document.getElementById('playerName').textContent = state.settings.name || 'Player';
+  document.getElementById('xpLabel').textContent = `${p.xp} / ${p.xpToNext}`;
+  document.getElementById('xpFill').style.width = Math.min(100, (p.xp/p.xpToNext)*100) + '%';
+  const rank = computeRank(p.totalCompleted || 0);
+  document.getElementById('rankBadge').textContent = rank;
+}
+
+function questCardHTML(t){
+  const doneClass = t.done ? 'done' : '';
+  const pendingClass = t.pendingFlag ? 'pending' : '';
+  const typeLabel = t.type === 'weekly' ? 'WEEKLY' : (t.type==='boss' ? 'BOSS' : 'DAILY');
+  return `
+  <div class="sys-panel quest ${doneClass} ${pendingClass} ${t.type==='weekly'?'weekly':''}" data-id="${t.id}">
+    <div class="check" onclick="completeQuest('${t.id}')">${t.done ? '✓' : ''}</div>
+    <div class="quest-body">
+      <div class="quest-title">${escapeHtml(t.title)}</div>
+      <div class="quest-meta">
+        <span class="type-tag">${typeLabel}</span>
+        ${t.time ? `<span>⏰ ${t.time}</span>` : ''}
+        ${t.date ? `<span>${t.date}</span>` : ''}
+        ${t.alarm ? '<span>🔔</span>' : ''}
+      </div>
+    </div>
+    <div class="quest-actions">
+      <button class="icon-btn" onclick="deleteQuest('${t.id}')">✕</button>
+    </div>
+  </div>`;
+}
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderQuestScreens(){
+  const d = todayStr();
+  const tmr = tomorrowStr();
+
+  const todays = state.tasks.filter(t => t.type==='daily' && t.date===d && !t.pendingFlag);
+  const weeklies = state.tasks.filter(t => t.type==='weekly' && !t.pendingFlag);
+  const upcoming = state.tasks.filter(t => t.type==='daily' && t.date > d && !t.pendingFlag)
+                     .sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  const tomorrowTasks = state.tasks.filter(t => t.date === tmr && t.type==='daily' && !t.pendingFlag);
+
+  document.getElementById('todayCount').textContent = todays.length;
+  document.getElementById('weeklyCount').textContent = weeklies.length;
+  document.getElementById('upcomingCount').textContent = upcoming.length;
+
+  document.getElementById('todayList').innerHTML = todays.length
+    ? todays.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(questCardHTML).join('')
+    : `<div class="empty-note">No quests today. Add one with the + button, Hunter.</div>`;
+
+  document.getElementById('weeklyList').innerHTML = weeklies.length
+    ? weeklies.map(questCardHTML).join('')
+    : `<div class="empty-note">No weekly quests set.</div>`;
+
+  document.getElementById('upcomingList').innerHTML = upcoming.length
+    ? upcoming.map(questCardHTML).join('')
+    : `<div class="empty-note">Nothing scheduled beyond today.</div>`;
+
+  document.getElementById('tomorrowList').innerHTML = tomorrowTasks.length
+    ? tomorrowTasks.map(questCardHTML).join('')
+    : `<div class="empty-note">No quests planned for tomorrow yet.</div>`;
+}
+
+function renderPrayerScreen(){
+  const d = todayStr();
+  if(!state.prayerLog[d]) state.prayerLog[d] = {};
+  const log = state.prayerLog[d];
+  let html = '';
+  PRAYER_NAMES.forEach(name=>{
+    const done = !!log[name];
+    const time = state.prayerTimes[name];
+    html += `
+    <div class="sys-panel quest boss ${done?'done':''}" data-prayer="${name}">
+      <div class="check" onclick="completePrayer('${name}')">${done?'✓':''}</div>
+      <div class="quest-body">
+        <div class="quest-title">${name} — Boss Quest</div>
+        <div class="quest-meta"><span class="type-tag" style="color:var(--gold);">BOSS</span><span>⏰ ${time}</span></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('prayerList').innerHTML = html;
+
+  const grid = document.getElementById('prayerTimesGrid');
+  grid.innerHTML = PRAYER_NAMES.map(name=>`
+    <div class="sys-panel prayer-item">
+      <label>${name}</label>
+      <input type="time" id="ptime_${name}" value="${state.prayerTimes[name]}">
+    </div>
+  `).join('');
+}
+function savePrayerTimes(){
+  PRAYER_NAMES.forEach(name=>{
+    const v = document.getElementById('ptime_'+name).value;
+    if(v) state.prayerTimes[name] = v;
+  });
+  saveState('prayer');
+  showToast('Boss quest times updated.');
+  renderPrayerScreen();
+}
+function completePrayer(name){
+  const d = todayStr();
+  if(!state.prayerLog[d]) state.prayerLog[d] = {};
+  if(state.prayerLog[d][name]) return;
+  state.prayerLog[d][name] = true;
+  saveState('prayerLog');
+  const leveled = grantXP(xpForType('boss'));
+  state.player.totalCompleted = (state.player.totalCompleted||0) + 1;
+  saveState('player');
+  updateStreak();
+  renderPrayerScreen();
+  renderHUD();
+  showSystemMessage(true, xpForType('boss'));
+  if(leveled) triggerLevelUp();
+  playTing();
+}
+
+function renderPendingScreen(){
+  const pend = state.tasks.filter(t=>t.pendingFlag);
+  document.getElementById('pendingCount').textContent = pend.length;
+  document.getElementById('pendingList').innerHTML = pend.length
+    ? pend.map(t=>`
+      <div class="sys-panel quest pending" data-id="${t.id}">
+        <div class="check" onclick="completeQuest('${t.id}')"></div>
+        <div class="quest-body">
+          <div class="quest-title">${escapeHtml(t.title)}</div>
+          <div class="quest-meta"><span style="color:var(--danger);">MISSED ALARM</span><span>⏰ ${t.time}</span><span>${t.date}</span></div>
+        </div>
+        <div class="quest-actions"><button class="icon-btn" onclick="deleteQuest('${t.id}')">✕</button></div>
+      </div>`).join('')
+    : `<div class="empty-note">No pending quests. Well managed, Hunter.</div>`;
+}
+
+function renderStats(){
+  recomputeTodayTotals();
+  const d = todayStr();
+  const todayRec = state.history[d] || {completed:0,total:0};
+  document.getElementById('statToday').textContent = `${todayRec.completed}/${todayRec.total}`;
+
+  // week
+  const now = new Date();
+  const weekDates = [];
+  for(let i=6;i>=0;i--){
+    const dd = new Date(); dd.setDate(now.getDate()-i);
+    weekDates.push(todayStr(dd));
+  }
+  let wc=0, wt=0;
+  weekDates.forEach(ds=>{ const r = state.history[ds]; if(r){wc+=r.completed; wt+=r.total;} });
+  document.getElementById('statWeek').textContent = `${wc}/${wt}`;
+
+  // month
+  const monthPrefix = d.slice(0,7);
+  let mc=0, mt=0;
+  Object.keys(state.history).forEach(ds=>{
+    if(ds.startsWith(monthPrefix)){ mc += state.history[ds].completed; mt += state.history[ds].total; }
+  });
+  document.getElementById('statMonth').textContent = `${mc}/${mt}`;
+
+  // week bars
+  const barsWrap = document.getElementById('weekBars');
+  barsWrap.innerHTML = weekDates.map(ds=>{
+    const r = state.history[ds] || {completed:0,total:0};
+    const pct = r.total ? Math.round((r.completed/r.total)*100) : 0;
+    const label = ds.slice(5);
+    return `<div class="bar-row"><div class="bl">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div style="font-family:var(--mono);font-size:10px;color:var(--text-dim);width:36px;text-align:right;">${pct}%</div></div>`;
+  }).join('');
+
+  // badges
+  const badges = [];
+  const rank = computeRank(state.player.totalCompleted||0);
+  badges.push(`<span class="btn small" style="pointer-events:none;">Rank ${rank}</span>`);
+  if(state.player.dungeonClearDates && state.player.dungeonClearDates.includes(d)){
+    badges.push(`<span class="btn small" style="pointer-events:none; border-color:var(--gold); color:var(--gold);">Daily Dungeon Clear</span>`);
+  }
+  if(state.player.streak >= 3){
+    badges.push(`<span class="btn small" style="pointer-events:none;">🔥 ${state.player.streak}-Day Streak</span>`);
+  }
+  if(state.player.level >= 5){
+    badges.push(`<span class="btn small" style="pointer-events:none;">Veteran Hunter</span>`);
+  }
+  document.getElementById('badgeList').innerHTML = badges.join('') || '<span class="empty-note" style="border:none;">No badges yet — clear quests to earn them.</span>';
+}
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('screen-'+tab.dataset.screen).classList.add('active');
+    if(tab.dataset.screen === 'stats') renderStats();
+  });
+});
+
+/* ---------------- Add / Edit Quest ---------------- */
+function openAddModal(forTomorrow){
+  addingForTomorrow = forTomorrow;
+  editingQuestId = null;
+  document.getElementById('addModalTitle').textContent = 'New Quest';
+  document.getElementById('qTitle').value = '';
+  document.getElementById('qDate').value = forTomorrow ? tomorrowStr() : todayStr();
+  document.getElementById('qTime').value = nowHM();
+  document.getElementById('qAlarm').checked = true;
+  document.querySelector('input[name="qType"][value="daily"]').checked = true;
+  document.getElementById('addModalOverlay').classList.remove('hidden');
+}
+function closeAddModal(){
+  document.getElementById('addModalOverlay').classList.add('hidden');
+}
+function saveNewQuest(){
+  const title = document.getElementById('qTitle').value.trim();
+  if(!title){ showToast('Enter a quest title.'); return; }
+  const type = document.querySelector('input[name="qType"]:checked').value;
+  const date = document.getElementById('qDate').value || todayStr();
+  const time = document.getElementById('qTime').value || '';
+  const alarm = document.getElementById('qAlarm').checked;
+
+  const task = {
+    id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    title, type, date, time, alarm,
+    done:false, pendingFlag:false,
+    alarmFiredAt:null,
+    weekKey: type==='weekly' ? null : undefined,
+    createdAt: Date.now()
+  };
+  state.tasks.push(task);
+  saveState('tasks');
+  closeAddModal();
+  renderQuestScreens();
+  renderStats();
+  showToast('Quest added to the log.');
+}
+function deleteQuest(id){
+  state.tasks = state.tasks.filter(t=>t.id!==id);
+  saveState('tasks');
+  renderQuestScreens();
+  renderPendingScreen();
+  renderStats();
+}
+
+function completeQuest(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t || t.done) return;
+  t.done = true;
+  t.pendingFlag = false;
+  t.completedAt = Date.now();
+
+  if(t.type === 'weekly'){
+    t.weekKey = isoWeekKey(todayStr());
+  }
+
+  const leveled = grantXP(xpForType(t.type));
+  state.player.totalCompleted = (state.player.totalCompleted||0) + 1;
+  saveState('player');
+  saveState('tasks');
+  updateStreak();
+  recomputeTodayTotals();
+  const dungeonClear = checkDungeonClear();
+
+  renderQuestScreens();
+  renderPendingScreen();
+  renderHUD();
+  renderStats();
+
+  showSystemMessage(false, xpForType(t.type));
+  if(leveled) triggerLevelUp();
+  if(dungeonClear) setTimeout(()=> showToast('🏆 Daily Dungeon Clear!'), 1600);
+  playTing();
+}
+
+/* Weekly quest auto-reset: if a weekly quest's completion was in a previous ISO week, un-check it */
+function resetWeeklyQuestsIfNeeded(){
+  const curWeek = isoWeekKey(todayStr());
+  let changed = false;
+  state.tasks.forEach(t=>{
+    if(t.type==='weekly' && t.done && t.weekKey && t.weekKey !== curWeek){
+      t.done = false;
+      t.weekKey = null;
+      changed = true;
+    }
+  });
+  if(changed) saveState('tasks');
+}
+
+/* ---------------- System Messages / Level Up ---------------- */
+function showSystemMessage(isBoss, xpAmount){
+  const pool = MOTIVATION_POOL;
+  const msg = pool[Math.floor(Math.random()*pool.length)];
+  document.getElementById('sysMsgText').textContent = msg;
+  document.getElementById('sysMsgXp').textContent = `+${xpAmount} XP`;
+  document.getElementById('sysMsgOverlay').classList.remove('hidden');
+}
+function closeSysMsg(){
+  document.getElementById('sysMsgOverlay').classList.add('hidden');
+}
+function triggerLevelUp(){
+  const overlay = document.getElementById('levelUpOverlay');
+  document.getElementById('levelUpText').textContent = `LEVEL UP! Lv.${state.player.level}`;
+  overlay.classList.remove('hidden');
+  setTimeout(()=> overlay.classList.add('hidden'), 1500);
+}
+
+/* ---------------- Toast ---------------- */
+let toastTimer = null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'sys-panel show';
+  el.style.padding = '10px 18px';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 2200);
+}
+
+/* ---------------- Sound ---------------- */
+function playTing(){
+  if(!state.settings.sound) return;
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.12);
+    g.gain.setValueAtTime(0.18, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.42);
+  }catch(e){ /* audio not available, ignore */ }
+}
+
+/* ---------------- Notifications & Alarm Loop ---------------- */
+function requestNotifPermission(){
+  if(!('Notification' in window)){ showToast('Notifications not supported here.'); return; }
+  Notification.requestPermission().then(p=>{
+    showToast(p === 'granted' ? 'Notifications enabled.' : 'Permission denied.');
+  });
+}
+function fireNotification(title, body){
+  if('Notification' in window && Notification.permission === 'granted'){
+    try{ new Notification(title, {body}); }catch(e){}
+  }
+  playTing();
+}
+
+function alarmTick(){
+  const d = todayStr();
+  const hm = nowHM();
+
+  // Regular quests
+  state.tasks.forEach(t=>{
+    if(t.type==='weekly') return;
+    if(t.done || t.pendingFlag) return;
+    if(!t.alarm || !t.time) return;
+    if(t.date !== d) return;
+    if(t.alarmFiredAt) {
+      // check 10-minute pending rule
+      const elapsedMin = (Date.now() - t.alarmFiredAt) / 60000;
+      if(elapsedMin >= 10){
+        t.pendingFlag = true;
+        saveState('tasks');
+        renderQuestScreens();
+        renderPendingScreen();
+        showToast(`"${t.title}" moved to Pending Quests.`);
+      }
+      return;
+    }
+    if(t.time === hm){
+      t.alarmFiredAt = Date.now();
+      saveState('tasks');
+      fireNotification('⚔ Quest Alarm', t.title);
+    }
+  });
+
+  // Weekly quests: fire alarm on their date/time reference too if alarm set (once per week, no auto-pending)
+  state.tasks.forEach(t=>{
+    if(t.type!=='weekly' || t.done || !t.alarm || !t.time) return;
+    if(t.time === hm && t._lastAlarmDay !== d){
+      t._lastAlarmDay = d;
+      saveState('tasks');
+      fireNotification('⚔ Weekly Quest', t.title);
+    }
+  });
+
+  // Prayer / boss quests
+  if(!state.prayerLog[d]) state.prayerLog[d] = {};
+  PRAYER_NAMES.forEach(name=>{
+    const time = state.prayerTimes[name];
+    const log = state.prayerLog[d];
+    const firedKey = name+'_fired';
+    if(!log[name] && time === hm && !log[firedKey]){
+      log[firedKey] = true;
+      saveState('prayerLog');
+      fireNotification('👑 Boss Quest', name + ' time has arrived.');
+    }
+  });
+
+  resetWeeklyQuestsIfNeeded();
+}
+
+/* ---------------- Settings ---------------- */
+function saveSettings(){
+  state.settings.name = document.getElementById('settingName').value.trim() || 'Player';
+  state.settings.sound = document.getElementById('soundToggle').checked;
+  saveState('settings');
+  renderHUD();
+  showToast('Settings saved.');
+}
+function resetAllData(){
+  if(!confirm('This will erase ALL quests, progress, and PIN. Continue?')) return;
+  Object.values(LS_KEYS).forEach(k=> localStorage.removeItem(k));
+  location.reload();
+}
+
+/* ---------------- Report Export ---------------- */
+function downloadReport(fmt){
+  recomputeTodayTotals();
+  const rows = Object.keys(state.history).sort().map(d=>{
+    const r = state.history[d];
+    return {date:d, completed:r.completed, total:r.total, missed: Math.max(0, r.total-r.completed)};
+  });
+  const summary = {
+    player: state.settings.name,
+    level: state.player.level,
+    rank: computeRank(state.player.totalCompleted||0),
+    streak: state.player.streak,
+    totalCompleted: state.player.totalCompleted||0,
+    generatedAt: new Date().toISOString(),
+    dailyHistory: rows
+  };
+  let blob, filename;
+  if(fmt === 'json'){
+    blob = new Blob([JSON.stringify(summary, null, 2)], {type:'application/json'});
+    filename = `shadow-monarch-report-${todayStr()}.json`;
+  } else {
+    let csv = 'date,completed,total,missed\n';
+    rows.forEach(r=> csv += `${r.date},${r.completed},${r.total},${r.missed}\n`);
+    csv += `\nplayer,${summary.player}\nlevel,${summary.level}\nrank,${summary.rank}\nstreak,${summary.streak}\ntotalCompleted,${summary.totalCompleted}\n`;
+    blob = new Blob([csv], {type:'text/csv'});
+    filename = `shadow-monarch-report-${todayStr()}.csv`;
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Report downloaded.');
+}
+
+/* ---------------- Boot ---------------- */
+function boot(){
+  loadAll();
+  initLock();
+  if('Notification' in window && Notification.permission === 'default'){
+    // ask politely, non-blocking
+    setTimeout(()=>{ try{ Notification.requestPermission(); }catch(e){} }, 800);
+  }
+  setInterval(alarmTick, 15000);
+  alarmTick();
+}
+document.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
