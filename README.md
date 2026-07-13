@@ -1,2 +1,2 @@
 # ANAS-DAILY-PLANNER
-Daily panner software 
+Daily planner software 
